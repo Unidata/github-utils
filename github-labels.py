@@ -45,12 +45,12 @@ if __name__ == '__main__':
         print('Getting labels from {0}'.format(args.repository))
         with open(args.filename, 'wt') as outfile:
             labels = sorted((l.name, l.color) for l in repo.get_labels())
-            outfile.write(''.join('{0}:{1}\n'.format(*l) for l in labels))
+            outfile.write(''.join('{0}|{1}\n'.format(*l) for l in labels))
     elif args.action == 'update':
         print('Updating labels on {0}'.format(args.repository))
         with open(args.filename, 'rt') as infile:
             for line in infile:
-                parts = line.strip().split(':')
+                parts = line.strip().split('|')
                 if len(parts) == 3:
                     old_name, new_name, color = parts
                 else:
