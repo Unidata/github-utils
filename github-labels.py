@@ -15,7 +15,7 @@ def get_token():
             return token_file.readline()[:-1]
     except IOError:
         import os
-        return os.environ.get('GITHUB_TOKEN')
+        return os.environ['GITHUB_TOKEN']
 
 
 if __name__ == '__main__':
@@ -32,7 +32,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Get the github API entry
-    g = github.Github(get_token())
+    token = get_token()
+    g = github.Github(token)
 
     # Get the organization
     org = g.get_organization(args.org)
@@ -47,6 +48,8 @@ if __name__ == '__main__':
             labels = sorted((l.name, l.color) for l in repo.get_labels())
             outfile.write(''.join('{0}|{1}\n'.format(*l) for l in labels))
     elif args.action == 'update':
+        if token is None:
+            raise RuntimeError('Updating labels requires a personal access token!')
         print('Updating labels on {0}'.format(args.repository))
         with open(args.filename, 'rt') as infile:
             for line in infile:
