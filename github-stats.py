@@ -47,7 +47,7 @@ class Contributor(tuple):
         if company:
             affil = company
             affil_test = affil.lower()
-            if 'university' in affil_test or 'UCAR' in affil:
+            if 'university' in affil_test or 'univ.' in affil_test or 'UCAR' in affil:
                 typ = 'EDU'
             elif ('NOAA' in affil or 'NWS' in affil or 'NASA' in affil or
                   'national lab' in affil_test):
