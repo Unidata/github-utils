@@ -72,6 +72,9 @@ class Contributor(tuple):
         except IOError:
             pass
 
+    def __str__(self):
+        return u', '.join(self)
+
 
 def filter_members(users, members):
     return set(users) - members
@@ -161,10 +164,8 @@ def count(seq):
 
 def print_users(users):
     # Format for printing users
-    fmt = u'\t\t{0}, {1}, {2}, {3}, {4}'
-    print(fmt.format('User', 'Name', 'Email', 'Affiliation', 'Type'))
     for u in users:
-        print(fmt.format(u.login, u.name, u.email, u.affiliation, u.type))
+        print(u'\t\t' + str(u))
 
 
 def count_total_items(dict_of_list):
