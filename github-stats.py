@@ -134,6 +134,10 @@ def get_external_participation(issues, members, start):
     return opened, comments
 
 
+def get_support_effort(ext_issues):
+    return sum(i.comments for issues in ext_issues.values() for i in issues)
+
+
 def get_token():
     r"""
     Get the API token to use for talking to GitHub
@@ -232,8 +236,10 @@ if __name__ == '__main__':
 
         print('\tExternal Issue Activity: {0} opened, {1} comments'.format(
                 count_total_items(ext_issues), count_total_items(ext_issue_comments)))
+        print('\t\tTotal replies for created issues: {0}'.format(get_support_effort(ext_issues)))
         print('\tExternal PR Activity: {0} opened, {1} comments'.format(
                 count_total_items(ext_prs), count_total_items(ext_pr_comments)))
+        print('\t\tTotal replies for created PRs: {0}'.format(get_support_effort(ext_prs)))
 
         # Gather up all of those users
         contributors = (set(ext_issues.keys()) | set(ext_issue_comments.keys()) |
