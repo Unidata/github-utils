@@ -258,3 +258,24 @@ if __name__ == '__main__':
         # Get all of the commits since the start of the period
         commit_count = count(repo.get_commits(since=start))
         print('\tCommits: {0}'.format(commit_count))
+
+        if args.verbose >= 2:
+            print('\tActivity Listing:')
+            events = []
+            for user, user_issues in ext_issues.items():
+                for i in user_issues:
+                    events.append((i.created_at, 'Issue', user))
+            for user, user_comments in ext_issue_comments.items():
+                for c in user_comments:
+                    events.append((c.created_at, 'Comment', user))
+            for user, user_issues in ext_prs.items():
+                for i in user_issues:
+                    events.append((i.created_at, 'PR', user))
+            for user, user_comments in ext_issue_comments.items():
+                for c in user_comments:
+                    events.append((c.created_at, 'PR Comment', user))
+            for star in new_stars:
+                events.append((star.starred_at, 'Star', get_user(star.user)))
+
+            for dt, kind, user in sorted(events):
+                print('\t\t{0}, {1}, {2}'.format(dt, kind, user))
