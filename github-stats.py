@@ -46,13 +46,15 @@ class Contributor(tuple):
 
         if company:
             affil = company
-            if 'university' in affil.lower() or 'UCAR' in affil:
+            affil_test = affil.lower()
+            if 'university' in affil_test or 'UCAR' in affil:
                 typ = 'EDU'
-            elif 'NOAA' in affil or 'NWS' in affil or 'ARM' in affil:
+            elif ('NOAA' in affil or 'NWS' in affil or 'NASA' in affil or
+                  'national lab' in affil_test):
                 typ = 'GOV'
 
         if email and (email.endswith('edu') or email.endswith('gov') or
-                        email.endswith('mil')):
+                      email.endswith('mil')):
             if not affil:
                 affil = email.split('@')[-1].rsplit('.', 1)[0].title()
             if not typ:
