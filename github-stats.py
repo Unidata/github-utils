@@ -169,7 +169,7 @@ def count(seq):
 def print_users(users):
     # Format for printing users
     for u in users:
-        print(u'\t\t' + str(u))
+        print(u'\t\t' + unicode(u))
 
 
 def count_total_items(dict_of_list):
@@ -285,4 +285,4 @@ if __name__ == '__main__':
                 events.append((star.starred_at, 'Star', get_user(star.user)))
 
             for dt, kind, user in sorted(events):
-                print('\t\t{0}, {1}, {2}'.format(dt, kind, user))
+                print(u'\t\t{0}, {1}, {2}'.format(dt, kind, user))
