@@ -211,7 +211,8 @@ if __name__ == '__main__':
     blacklist = {get_user(m) for m in org.get_members()}
 
     # Add other users to blacklist
-    other_users = ['codecov-io', 'landscape-bot', 'rkambic', 'madry']
+    other_users = ['codecov-io', 'landscape-bot', 'rkambic', 'madry',
+                   'BenDomenico']
     blacklist |= {get_user(g.get_user(u)) for u in other_users}
 
     # Commits?
