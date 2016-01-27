@@ -157,7 +157,9 @@ if __name__ == '__main__':
 
     # Get command-line arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('repository', help='Repository', type=str, nargs='+')
+    parser.add_argument('repository', help='Repository', type=str, nargs='*',
+                        default=['siphon', 'thredds', 'netcdf-c', 'idv', 'LDM', 'awips2',
+                                 'gempak', 'rosetta', 'UDUNITS-2'])
     parser.add_argument('-o', '--org', help='Organization', type=str, default='Unidata')
     parser.add_argument('-s', '--start', help='Starting date for stats [YYYYMMDD]', type=str)
     parser.add_argument('-d', '--days', help='Get stats for last n days', type=int,
