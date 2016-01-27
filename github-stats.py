@@ -107,8 +107,14 @@ def get_user(item):
         user = item.user
     except AttributeError:
         user = item
-    return Contributor(user.login, user.name, user.email, user.company)
 
+    if user.login not in get_user.cache:
+        get_user.cache[user.login] = Contributor(user.login, user.name, user.email,
+                                                 user.company)
+
+    return get_user.cache[user.login]
+
+get_user.cache = dict()
 
 def get_external_participation(issues, members):
     opened = Counter()
