@@ -116,17 +116,18 @@ def get_user(item):
 
 get_user.cache = dict()
 
-def get_external_participation(issues, members):
-    opened = Counter()
-    comments = Counter()
+
+def get_external_participation(issues, members, start):
+    opened = dict()
+    comments = dict()
     for i in issues:
         user = get_user(i)
-        if user not in members:
-            opened[user] += 1
+        if user not in members and i.created_at >= start:
+            opened.setdefault(user, []).append(i)
         for c in i.get_comments():
             user = get_user(c)
-            if user not in members:
-                comments[user] += 1
+            if user not in members and c.created_at >= start:
+                comments.setdefault(user, []).append(c)
     return opened, comments
 
 
@@ -142,12 +143,20 @@ def get_token():
         return os.environ.get('GITHUB_TOKEN')
 
 
-def closed_count(issues):
-    return len(list(filter(is_closed, issues)))
+def created_count(issues, start):
+    return count_if(issues, lambda i: i.created_at >= start)
 
 
-def is_closed(issue):
-    return issue.state == 'closed'
+def closed_count(issues, start):
+    return count_if(issues, lambda i: i.state == 'closed' and i.closed_at >= start)
+
+
+def count_if(seq, pred):
+    return sum(1 for item in seq if pred(item))
+
+
+def count(seq):
+    return sum(1 for _ in seq)
 
 
 def print_users(users):
@@ -156,6 +165,10 @@ def print_users(users):
     print(fmt.format('User', 'Name', 'Email', 'Affiliation', 'Type'))
     for u in users:
         print(fmt.format(u.login, u.name, u.email, u.affiliation, u.type))
+
+
+def count_total_items(dict_of_list):
+    return sum(len(item) for item in dict_of_list.values())
 
 
 if __name__ == '__main__':
@@ -207,16 +220,19 @@ if __name__ == '__main__':
 
         # Get separate lists for issues and PRs
         issues, prs = get_activity(repo, start)
-        print('\tIssues: {0} ({1} closed)'.format(len(issues), closed_count(issues)))
-        print('\tPRs: {0} ({1} closed)'.format(len(prs), closed_count(prs)))
+        print('\tActive Issues: {0} ({1} created, {2} closed)'.format(
+                len(issues), created_count(issues, start), closed_count(issues, start)))
+        print('\tActive PRs: {0} ({1} created, {2} closed)'.format(
+                len(prs), created_count(prs, start), closed_count(prs, start)))
 
         # Get those opened/commented upon by non-members
-        ext_issues, ext_issue_comments = get_external_participation(issues, blacklist)
-        ext_prs, ext_pr_comments = get_external_participation(prs, blacklist)
-        print('\tExternal Issues: {0} opened, {1} comments'.format(
-                sum(ext_issues.values()), sum(ext_issue_comments.values())))
-        print('\tExternal PRs: {0} opened, {1} comments'.format(
-                sum(ext_prs.values()), sum(ext_pr_comments.values())))
+        ext_issues, ext_issue_comments = get_external_participation(issues, blacklist, start)
+        ext_prs, ext_pr_comments = get_external_participation(prs, blacklist, start)
+
+        print('\tExternal Issue Activity: {0} opened, {1} comments'.format(
+                count_total_items(ext_issues), count_total_items(ext_issue_comments)))
+        print('\tExternal PR Activity: {0} opened, {1} comments'.format(
+                count_total_items(ext_prs), count_total_items(ext_pr_comments)))
 
         # Gather up all of those users
         contributors = (set(ext_issues.keys()) | set(ext_issue_comments.keys()) |
@@ -233,11 +249,11 @@ if __name__ == '__main__':
 
         # Also grab users who are watching repo activity
         watchers = [w for w in get_subscribers(repo) if get_user(w) not in blacklist]
-        watch_count = sum(1 for w in watchers)
+        watch_count = count(watchers)
         print('\tWatchers: {0}'.format(watch_count))
         if args.verbose:
             print_users(get_user(w) for w in watchers)
 
         # Get all of the commits since the start of the period
-        commit_count = sum(1 for c in repo.get_commits(since=start))
+        commit_count = count(repo.get_commits(since=start))
         print('\tCommits: {0}'.format(commit_count))
