@@ -278,7 +278,7 @@ if __name__ == '__main__':
             for user, user_issues in ext_prs.items():
                 for i in user_issues:
                     events.append((i.created_at, 'PR', user))
-            for user, user_comments in ext_issue_comments.items():
+            for user, user_comments in ext_pr_comments.items():
                 for c in user_comments:
                     events.append((c.created_at, 'PR Comment', user))
             for star in new_stars:
