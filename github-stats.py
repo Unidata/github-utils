@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 from __future__ import print_function
 from datetime import datetime, timedelta
-from collections import Counter
 from operator import itemgetter
 import github
 
@@ -188,7 +187,8 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--start', help='Starting date for stats [YYYYMMDD]', type=str)
     parser.add_argument('-d', '--days', help='Get stats for last n days', type=int,
                         default=90)
-    parser.add_argument('-v', '--verbose', help='Verbose output', action='count')
+    parser.add_argument('-v', '--verbose', help='Verbose output', action='count',
+                        default=0)
     parser.add_argument('--debug', help='Print out debugging information', action='store_true')
     args = parser.parse_args()
 
