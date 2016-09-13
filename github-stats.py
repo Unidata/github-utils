@@ -168,7 +168,7 @@ def count(seq):
 def print_users(users):
     # Format for printing users
     for u in users:
-        print(u'\t\t' + unicode(u))
+        print(u'\t\t' + str(u))
 
 
 def count_total_items(dict_of_list):
