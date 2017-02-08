@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 from datetime import datetime, timedelta
+from functools import lru_cache
 from operator import itemgetter
 import github
 
@@ -79,31 +80,6 @@ def filter_members(users, members):
     return set(users) - members
 
 
-def get_stars(repo, since, members):
-    stars = repo.get_stargazers_with_dates()
-    total_stars = [s for s in stars if get_user(s) not in blacklist]
-    new_stars = [s for s in stars if s.starred_at > start and get_user(s) not in blacklist]
-    return new_stars, total_stars
-
-
-def get_activity(repo, since):
-    r"""
-    Get issues and pull requests since a given time
-    """
-    issues = repo.get_issues(state='all', since=since)
-
-    # Filter results to issues and PRs
-    real_issues = []
-    prs = []
-    for i in issues:
-        if i.pull_request:
-            prs.append(i)
-        else:
-            real_issues.append(i)
-
-    return real_issues, prs
-
-
 def get_user(item):
     try:
         user = item.user
@@ -161,6 +137,7 @@ def count_if(seq, pred):
     return sum(1 for item in seq if pred(item))
 
 
+# useful for generators without making the full list
 def count(seq):
     return sum(1 for _ in seq)
 
@@ -175,13 +152,187 @@ def count_total_items(dict_of_list):
     return sum(len(item) for item in dict_of_list.values())
 
 
+class RepoMetrics(object):
+    def __init__(self, repo, start, blacklist):
+        self._repo = repo
+        self._start = start
+        self._blacklist = blacklist
+        self._prs = self._issues = None
+
+    @property
+    @lru_cache()
+    def prs(self):
+        self._fetch_issues()
+        return self._prs
+
+    @property
+    @lru_cache()
+    def issues(self):
+        self._fetch_issues()
+        return self._issues
+
+    @property
+    @lru_cache()
+    def ext_issues(self):
+        self._fetch_external_issues()
+        return self._ext_issues
+
+    @property
+    @lru_cache()
+    def ext_issue_comments(self):
+        self._fetch_external_issues()
+        return self._ext_issue_comments
+
+    @property
+    @lru_cache()
+    def ext_prs(self):
+        self._fetch_external_prs()
+        return self._ext_prs
+
+    @property
+    @lru_cache()
+    def ext_pr_comments(self):
+        self._fetch_external_prs()
+        return self._ext_pr_comments
+
+    @property
+    def contributors(self):
+        return (set(self.ext_issues) | set(self.ext_issue_comments) |
+                set(self.ext_prs) | set(self.ext_pr_comments))
+
+    @property
+    def name(self):
+        return self._repo.name
+
+    @property
+    def total_stars(self):
+        return (s for s in self._fetch_stars() if get_user(s) not in self._blacklist)
+
+    @property
+    def new_stars(self):
+        return (s for s in self.total_stars if s.starred_at > self._start)
+
+    @property
+    def watchers(self):
+        return (w for w in self._fetch_watchers() if get_user(w) not in self._blacklist)
+
+    @property
+    def total_forks(self):
+        return (f.owner for f in self._fetch_forks()
+                if get_user(f.owner) not in self._blacklist)
+
+    @property
+    def new_forks(self):
+        return (f for f in self.total_forks if f.created_at > self._start)
+
+    @property
+    @lru_cache()
+    def commits(self):
+        return self._repo.get_commits(since=self._start)
+
+    @property
+    def events(self):
+        for user, user_issues in self.ext_issues.items():
+            for i in user_issues:
+                yield (i.created_at, 'Issue', user)
+        for user, user_comments in self.ext_issue_comments.items():
+            for c in user_comments:
+                yield (c.created_at, 'Comment', user)
+        for user, user_issues in self.ext_prs.items():
+            for i in user_issues:
+                yield (i.created_at, 'PR', user)
+        for user, user_comments in self.ext_pr_comments.items():
+            for c in user_comments:
+                yield (c.created_at, 'PR Comment', user)
+        for star in self.new_stars:
+            yield (star.starred_at, 'Star', get_user(star.user))
+
+    @lru_cache()
+    def _fetch_forks(self):
+        return self._repo.get_forks()
+
+    def _fetch_issues(self):
+        """
+        Get issues and pull requests since a given time
+        """
+        # Filter results to issues and PRs
+        self._issues = []
+        self._prs = []
+        for i in self._repo.get_issues(state='all', since=self._start):
+            if i.pull_request:
+                self._prs.append(i)
+            else:
+                self._issues.append(i)
+
+    @lru_cache()
+    def _fetch_watchers(self):
+        return get_subscribers(self._repo)
+
+    @lru_cache()
+    def _fetch_stars(self):
+        return self._repo.get_stargazers_with_dates()
+
+    def _fetch_external_issues(self):
+        self._ext_issues, self._ext_issue_comments = get_external_participation(self.issues,
+                                                                                self._blacklist,
+                                                                                self._start)
+
+    def _fetch_external_prs(self):
+        self._ext_prs, self._ext_pr_comments = get_external_participation(self.issues,
+                                                                          self._blacklist,
+                                                                          self._start)
+
+
+def output_default(metrics, verbose=0):
+    print('Repository: {0}'.format(metrics.name))
+    print('\tActive Issues: {0} ({1} created, {2} closed)'.format(
+        len(metrics.issues), created_count(metrics.issues, start),
+        closed_count(metrics.issues, start)))
+    print('\tActive PRs: {0} ({1} created, {2} closed)'.format(
+        len(metrics.prs), created_count(metrics.prs, start),
+        closed_count(metrics.prs, start)))
+    print('\tExternal Issue Activity: {0} opened, {1} comments'.format(
+        count_total_items(metrics.ext_issues),
+        count_total_items(metrics.ext_issue_comments)))
+    print('\t\tTotal replies for created issues: {0}'.format(
+        get_support_effort(metrics.ext_issues)))
+    print('\tExternal PR Activity: {0} opened, {1} comments'.format(
+        count_total_items(metrics.ext_prs), count_total_items(metrics.ext_pr_comments)))
+    print('\t\tTotal replies for created PRs: {0}'.format(get_support_effort(metrics.ext_prs)))
+    print('\tUnique external contributors: {0}'.format(len(metrics.contributors)))
+
+    if verbose:
+        print_users(metrics.contributors)
+
+    print('\tStars: {0} ({1} total)'.format(count(metrics.new_stars),
+                                            count(metrics.total_stars)))
+    if verbose:
+        print_users(get_user(s) for s in metrics.new_stars)
+
+    print('\tWatchers: {0}'.format(count(metrics.watchers)))
+    if verbose:
+        print_users(get_user(w) for w in metrics.watchers)
+
+    print('\tForks: {0} ({1} total)'.format(count(metrics.new_forks),
+                                            count(metrics.total_forks)))
+    if verbose:
+        print_users(get_user(f) for f in metrics.new_forks)
+
+    print('\tCommits: {0}'.format(count(metrics.commits)))
+
+    if verbose >= 2:
+        print('\tActivity Listing:')
+        for dt, kind, user in sorted(metrics.events):
+            print(u'\t\t{0}, {1}, {2}'.format(dt, kind, user))
+
+
 if __name__ == '__main__':
     import argparse
 
     # Get command-line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('repository', help='Repository', type=str, nargs='*',
-                        default=['siphon', 'thredds', 'netcdf-c',
+                        default=['siphon', 'MetPy', 'thredds', 'netcdf-c',
                                  'netcdf-cxx4', 'netcdf-fortran',
                                  'netCDF-Decoders', 'netCDF-Perl', 'idv',
                                  'LDM', 'awips2', 'gempak', 'rosetta',
@@ -218,74 +369,10 @@ if __name__ == '__main__':
                    'BenDomenico']
     blacklist |= {get_user(g.get_user(u)) for u in other_users}
 
-    # Commits?
     # Release downloads?
 
     print('Stats for {0} since {1}'.format(args.org, start))
     for repo_name in args.repository:
         # Get the object for this repository
         repo = org.get_repo(repo_name)
-        print('Repository: {0}'.format(repo.name))
-
-        # Get separate lists for issues and PRs
-        issues, prs = get_activity(repo, start)
-        print('\tActive Issues: {0} ({1} created, {2} closed)'.format(
-                len(issues), created_count(issues, start), closed_count(issues, start)))
-        print('\tActive PRs: {0} ({1} created, {2} closed)'.format(
-                len(prs), created_count(prs, start), closed_count(prs, start)))
-
-        # Get those opened/commented upon by non-members
-        ext_issues, ext_issue_comments = get_external_participation(issues, blacklist, start)
-        ext_prs, ext_pr_comments = get_external_participation(prs, blacklist, start)
-
-        print('\tExternal Issue Activity: {0} opened, {1} comments'.format(
-                count_total_items(ext_issues), count_total_items(ext_issue_comments)))
-        print('\t\tTotal replies for created issues: {0}'.format(get_support_effort(ext_issues)))
-        print('\tExternal PR Activity: {0} opened, {1} comments'.format(
-                count_total_items(ext_prs), count_total_items(ext_pr_comments)))
-        print('\t\tTotal replies for created PRs: {0}'.format(get_support_effort(ext_prs)))
-
-        # Gather up all of those users
-        contributors = (set(ext_issues.keys()) | set(ext_issue_comments.keys()) |
-                        set(ext_prs.keys()) | set(ext_pr_comments.keys()))
-        print('\tUnique external contributors: {0}'.format(len(contributors)))
-        if args.verbose:
-            print_users(contributors)
-
-        # Get total stars and stars added since start
-        new_stars, total_stars = get_stars(repo, start, blacklist)
-        print('\tStars: {0} ({1} total)'.format(len(new_stars), len(total_stars)))
-        if args.verbose:
-            print_users(get_user(s) for s in new_stars)
-
-        # Also grab users who are watching repo activity
-        watchers = [w for w in get_subscribers(repo) if get_user(w) not in blacklist]
-        watch_count = count(watchers)
-        print('\tWatchers: {0}'.format(watch_count))
-        if args.verbose:
-            print_users(get_user(w) for w in watchers)
-
-        # Get all of the commits since the start of the period
-        commit_count = count(repo.get_commits(since=start))
-        print('\tCommits: {0}'.format(commit_count))
-
-        if args.verbose >= 2:
-            print('\tActivity Listing:')
-            events = []
-            for user, user_issues in ext_issues.items():
-                for i in user_issues:
-                    events.append((i.created_at, 'Issue', user))
-            for user, user_comments in ext_issue_comments.items():
-                for c in user_comments:
-                    events.append((c.created_at, 'Comment', user))
-            for user, user_issues in ext_prs.items():
-                for i in user_issues:
-                    events.append((i.created_at, 'PR', user))
-            for user, user_comments in ext_pr_comments.items():
-                for c in user_comments:
-                    events.append((c.created_at, 'PR Comment', user))
-            for star in new_stars:
-                events.append((star.starred_at, 'Star', get_user(star.user)))
-
-            for dt, kind, user in sorted(events):
-                print(u'\t\t{0}, {1}, {2}'.format(dt, kind, user))
+        output_default(RepoMetrics(repo, start, blacklist), args.verbose)
