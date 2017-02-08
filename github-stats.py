@@ -95,16 +95,16 @@ def get_user(item):
 get_user.cache = dict()
 
 
-def get_external_participation(issues, members, start):
+def get_external_participation(issues, members, date_check):
     opened = dict()
     comments = dict()
     for i in issues:
         user = get_user(i)
-        if user not in members and i.created_at >= start:
+        if user not in members and date_check(i.created_at):
             opened.setdefault(user, []).append(i)
         for c in i.get_comments():
             user = get_user(c)
-            if user not in members and c.created_at >= start:
+            if user not in members and date_check(c.created_at):
                 comments.setdefault(user, []).append(c)
     return opened, comments
 
@@ -125,12 +125,12 @@ def get_token():
         return os.environ.get('GITHUB_TOKEN')
 
 
-def created_count(issues, start):
-    return count_if(issues, lambda i: i.created_at >= start)
+def created_count(issues, date_check):
+    return count_if(issues, lambda i: date_check(i.created_at))
 
 
-def closed_count(issues, start):
-    return count_if(issues, lambda i: i.state == 'closed' and i.closed_at >= start)
+def closed_count(issues, date_check):
+    return count_if(issues, lambda i: i.state == 'closed' and date_check(i.closed_at))
 
 
 def count_if(seq, pred):
@@ -153,11 +153,13 @@ def count_total_items(dict_of_list):
 
 
 class RepoMetrics(object):
-    def __init__(self, repo, start, blacklist):
+    def __init__(self, repo, start, end, blacklist):
         self._repo = repo
         self._start = start
+        self._end = end
         self._blacklist = blacklist
         self._prs = self._issues = None
+        self.date_in_range = lambda d: self._start <= d <= self._end
 
     @property
     @lru_cache()
@@ -210,7 +212,7 @@ class RepoMetrics(object):
 
     @property
     def new_stars(self):
-        return (s for s in self.total_stars if s.starred_at > self._start)
+        return (s for s in self.total_stars if self.date_in_range(s.starred_at))
 
     @property
     def watchers(self):
@@ -223,12 +225,12 @@ class RepoMetrics(object):
 
     @property
     def new_forks(self):
-        return (f for f in self.total_forks if f.created_at > self._start)
+        return (f for f in self.total_forks if self.date_in_range(f.created_at))
 
     @property
     @lru_cache()
     def commits(self):
-        return self._repo.get_commits(since=self._start)
+        return self._repo.get_commits(since=self._start, until=self._end)
 
     @property
     def events(self):
@@ -259,10 +261,12 @@ class RepoMetrics(object):
         self._issues = []
         self._prs = []
         for i in self._repo.get_issues(state='all', since=self._start):
-            if i.pull_request:
-                self._prs.append(i)
-            else:
-                self._issues.append(i)
+            if (self.date_in_range(i.created_at) or self.date_in_range(i.updated_at) or
+                    (i.state == 'closed' and self.date_in_range(i.closed_at))):
+                if i.pull_request:
+                    self._prs.append(i)
+                else:
+                    self._issues.append(i)
 
     @lru_cache()
     def _fetch_watchers(self):
@@ -273,24 +277,22 @@ class RepoMetrics(object):
         return self._repo.get_stargazers_with_dates()
 
     def _fetch_external_issues(self):
-        self._ext_issues, self._ext_issue_comments = get_external_participation(self.issues,
-                                                                                self._blacklist,
-                                                                                self._start)
+        self._ext_issues, self._ext_issue_comments = get_external_participation(
+            self.issues, self._blacklist, self.date_in_range)
 
     def _fetch_external_prs(self):
-        self._ext_prs, self._ext_pr_comments = get_external_participation(self.issues,
-                                                                          self._blacklist,
-                                                                          self._start)
+        self._ext_prs, self._ext_pr_comments = get_external_participation(
+            self.prs, self._blacklist, self.date_in_range)
 
 
 def output_default(metrics, verbose=0):
     print('Repository: {0}'.format(metrics.name))
     print('\tActive Issues: {0} ({1} created, {2} closed)'.format(
-        len(metrics.issues), created_count(metrics.issues, start),
-        closed_count(metrics.issues, start)))
+        len(metrics.issues), created_count(metrics.issues, metrics.date_in_range),
+        closed_count(metrics.issues, metrics.date_in_range)))
     print('\tActive PRs: {0} ({1} created, {2} closed)'.format(
-        len(metrics.prs), created_count(metrics.prs, start),
-        closed_count(metrics.prs, start)))
+        len(metrics.prs), created_count(metrics.prs, metrics.date_in_range),
+        closed_count(metrics.prs, metrics.date_in_range)))
     print('\tExternal Issue Activity: {0} opened, {1} comments'.format(
         count_total_items(metrics.ext_issues),
         count_total_items(metrics.ext_issue_comments)))
@@ -337,8 +339,10 @@ if __name__ == '__main__':
                                  'netCDF-Decoders', 'netCDF-Perl', 'idv',
                                  'LDM', 'awips2', 'gempak', 'rosetta',
                                  'UDUNITS-2', 'unidata-python-workshop'])
+    parser.add_argument('-f', '--format', help='Output format', type=str, default='default')
     parser.add_argument('-o', '--org', help='Organization', type=str, default='Unidata')
     parser.add_argument('-s', '--start', help='Starting date for stats [YYYYMMDD]', type=str)
+    parser.add_argument('-e', '--end', help='Ending date for stats [YYYYMMDD]', type=str)
     parser.add_argument('-d', '--days', help='Get stats for last n days', type=int,
                         default=90)
     parser.add_argument('-v', '--verbose', help='Verbose output', action='count',
@@ -350,6 +354,14 @@ if __name__ == '__main__':
         start = datetime.strptime(args.start, '%Y%m%d')
     else:
         start = datetime.utcnow() - timedelta(days=args.days)
+
+    if args.end:
+        end = datetime.strptime(args.end, '%Y%m%d')
+    else:
+        end = datetime.utcnow()
+
+    formats = dict(default=output_default)
+    formatter = formats.get(args.format, output_default)
 
     # Get the github API entry
     g = github.Github(get_token())
@@ -371,8 +383,8 @@ if __name__ == '__main__':
 
     # Release downloads?
 
-    print('Stats for {0} since {1}'.format(args.org, start))
+    print('Stats for {0} from {1} to {2}'.format(args.org, start, end))
     for repo_name in args.repository:
         # Get the object for this repository
         repo = org.get_repo(repo_name)
-        output_default(RepoMetrics(repo, start, blacklist), args.verbose)
+        formatter(RepoMetrics(repo, start, end, blacklist), args.verbose)
