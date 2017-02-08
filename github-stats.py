@@ -152,6 +152,10 @@ def count_total_items(dict_of_list):
     return sum(len(item) for item in dict_of_list.values())
 
 
+def count_total_closed(dict_of_list, date_check):
+    return sum(closed_count(issues, date_check) for issues in dict_of_list.values())
+
+
 class RepoMetrics(object):
     def __init__(self, repo, start, end, blacklist):
         self._repo = repo
@@ -328,6 +332,31 @@ def output_default(metrics, verbose=0):
             print(u'\t\t{0}, {1}, {2}'.format(dt, kind, user))
 
 
+def nsf_output(metrics, *args):
+    print('Repository: {0}'.format(metrics.name))
+    print('\tExternal Issue Activity:\n\t\t{0} opened\n\t\t{1} closed\n\t\t{2} comments'.format(
+        count_total_items(metrics.ext_issues),
+        count_total_closed(metrics.ext_issues, metrics.date_in_range),
+        count_total_items(metrics.ext_issue_comments)))
+    print('\tExternal PR Activity:\n\t\t{0} opened\n\t\t{1} closed\n\t\t{2} comments'.format(
+        count_total_items(metrics.ext_prs),
+        count_total_closed(metrics.ext_prs, metrics.date_in_range),
+        count_total_items(metrics.ext_pr_comments)))
+
+    print('\tUnique external contributors: {0}'.format(len(metrics.contributors)))
+    print_users(metrics.contributors)
+
+    print('\tStars: {0} ({1} total)'.format(count(metrics.new_stars),
+                                            count(metrics.total_stars)))
+    print_users(get_user(s) for s in metrics.new_stars)
+
+    print('\tWatchers: {0}'.format(count(metrics.watchers)))
+    print_users(get_user(w) for w in metrics.watchers)
+
+    print('\tForks: {0} ({1} total)'.format(count(metrics.new_forks),
+                                            count(metrics.total_forks)))
+    print_users(get_user(f) for f in metrics.new_forks)
+
 if __name__ == '__main__':
     import argparse
 
@@ -360,7 +389,7 @@ if __name__ == '__main__':
     else:
         end = datetime.utcnow()
 
-    formats = dict(default=output_default)
+    formats = dict(default=output_default, nsf=nsf_output)
     formatter = formats.get(args.format, output_default)
 
     # Get the github API entry
