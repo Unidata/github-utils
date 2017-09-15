@@ -1,0 +1,24 @@
+Hi,
+
+MetPy 0.5.1 has been released, fixing some issues in 0.5.0:
+
+**Impending API CHANGE** In this version we have added support for specifying (via `dim_order` keyword argument) array ordering for the 2D grid functions (`geostrophic_wind`, `advection`, `h_convergence`, `v_vorticity`, and `convergence_vorticity`). The default behavior for all releases < 0.6 has been x, then y (specified as `'xy'`). For >= 0.6, we will be changing that to `'yx'` to make it simpler to use most data sources. In this release, we will issue a warning if you are using the default ordering--this warning can be suppressed by passing the `dim_order` argument with either `'xy'` or `'yx'`, whichever is appropriate for your data.
+
+Other fixes:
+- Fixed windchill with Kelvin temperature units
+- Fixed reversed ordering of GINI data y-coordinates (relative to image row order)
+- Fixed inaccuracy of example code in docstrings
+- Fixed `lfc()` to return NaNs instead of `None` when no LFC found
+
+For full release notes see the GitHub Release Page.
+
+https://github.com/Unidata/MetPy/releases/tag/v0.5.1
+
+MetPy packages are available for Conda on the conda-forge channel, and for pip from the Python Package Index.
+
+https://anaconda.org/conda-forge/metpy
+https://pypi.python.org/pypi/MetPy
+
+Let us know if you run into any problems, either at MetPy's issue tracker, or on this list.
+
+https://github.com/Unidata/MetPy/issues
