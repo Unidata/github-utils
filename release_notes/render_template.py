@@ -33,28 +33,40 @@ def strip_markdown_links(text):
         text = text.replace(link, clean)
     return text
 
-repo_name = sys.argv[1]
+if __name__ == '__main__':
+    import argparse
 
-# Get the repo's latest set of release notes
-git = github.Github()
-repo = git.get_repo('Unidata/{}'.format(repo_name))
-latest = repo.get_releases()[0]
+    # Get command-line arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('repository', help='Repository', type=str, nargs=1)
+    parser.add_argument('-o', '--org', help='Organization', type=str, default='Unidata')
+    args = parser.parse_args()
 
-# Clean up the notes
-find_notes = re.compile(r'.*Summary(.*?)[# ]*Issues', re.MULTILINE|re.DOTALL)
-summary_notes = find_notes.findall(latest.body)[0].strip().rstrip()
-header_replace = re.compile(r'#+ (.+)')
-notes = header_replace.sub(sub_header, summary_notes).replace('\r\n', '\n')
+    repo_name = args.repository[0]
 
-# Make a set of release announcements
-formats = ['pyaos', 'python-users', 'roller']
-for f in formats:
-    if f != 'roller':
-        text = strip_markdown_links(notes)
-    content = {'package_name': repo_name,
-               'package_version': latest.title,
-               'release_notes': text,
-               'format': f}
-    rendered_text = render('templates/release_email.html', content)
-    with open('formatted_notes/{}.txt'.format(f), 'w') as outfile:
-        outfile.write(rendered_text)
+    # Get the repo's latest set of release notes
+    git = github.Github()
+    repo = git.get_repo('Unidata/{}'.format(repo_name))
+    latest = repo.get_releases()[0]
+
+    # Clean up the notes
+    find_notes = re.compile(r'.*(?:Highlights|Summary)(.*?)[# ]*Issues', re.MULTILINE|re.DOTALL)
+    summary_notes = find_notes.findall(latest.body)
+    if not summary_notes:
+        raise RuntimeError('Unable to find summary in release notes.')
+    summary_notes = summary_notes[0].strip().rstrip()
+    header_replace = re.compile(r'#+ (.+)')
+    notes = header_replace.sub(sub_header, summary_notes).replace('\r\n', '\n')
+
+    # Make a set of release announcements
+    formats = ['pyaos', 'python-users', 'roller']
+    for f in formats:
+        if f != 'roller':
+            text = strip_markdown_links(notes)
+        content = {'package_name': repo_name,
+                   'package_version': latest.title,
+                   'release_notes': text,
+                   'format': f}
+        rendered_text = render('templates/release_email.html', content)
+        with open('formatted_notes/{}.txt'.format(f), 'w') as outfile:
+            outfile.write(rendered_text)
