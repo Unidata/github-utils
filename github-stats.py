@@ -29,6 +29,10 @@ class Contributor(tuple):
     affiliation = property(itemgetter(3))
     type = property(itemgetter(4))
 
+    affil_keys = [('EDU', ('university', 'univ.', 'ucar', 'ncar',
+                           'national center for atmospheric', 'comet')),
+                  ('GOV', ('noaa', 'nws', 'nasa', 'national lab'))]
+
     def __new__(cls, login, name, email, company):
         affil, typ = Contributor._lookup_user(login, email, company)
         return super(Contributor, cls).__new__(cls, (login, name if name else 'Unknown',
@@ -47,14 +51,15 @@ class Contributor(tuple):
         if company:
             affil = company
             affil_test = affil.lower()
-            if 'university' in affil_test or 'univ.' in affil_test or 'UCAR' in affil:
-                typ = 'EDU'
-            elif ('NOAA' in affil or 'NWS' in affil or 'NASA' in affil or
-                  'national lab' in affil_test):
-                typ = 'GOV'
+            for category, keys in cls.affil_keys:
+                for key in keys:
+                    if key in affil_test:
+                        typ = category
+                        break
+                if typ:
+                    break
 
-        if email and (email.endswith('edu') or email.endswith('gov') or
-                      email.endswith('mil')):
+        if email and email.endswith(('edu', 'gov', 'mil')):
             if not affil:
                 affil = email.split('@')[-1].rsplit('.', 1)[0].title()
             if not typ:
@@ -91,6 +96,7 @@ def get_user(item):
                                                  user.company)
 
     return get_user.cache[user.login]
+
 
 get_user.cache = dict()
 
@@ -291,6 +297,11 @@ class RepoMetrics(object):
 
 def output_default(metrics, verbose=0):
     print('Repository: {0}'.format(metrics.name))
+
+    print('\tWatchers: {0}'.format(count(metrics.watchers)))
+    if verbose:
+        print_users(get_user(w) for w in metrics.watchers)
+
     print('\tActive Issues: {0} ({1} created, {2} closed)'.format(
         len(metrics.issues), created_count(metrics.issues, metrics.date_in_range),
         closed_count(metrics.issues, metrics.date_in_range)))
@@ -300,24 +311,19 @@ def output_default(metrics, verbose=0):
     print('\tExternal Issue Activity: {0} opened, {1} comments'.format(
         count_total_items(metrics.ext_issues),
         count_total_items(metrics.ext_issue_comments)))
-    print('\t\tTotal replies for created issues: {0}'.format(
-        get_support_effort(metrics.ext_issues)))
+    if verbose:
+        print('\t\tTotal replies for created issues: {0}'.format(
+            get_support_effort(metrics.ext_issues)))
     print('\tExternal PR Activity: {0} opened, {1} comments'.format(
         count_total_items(metrics.ext_prs), count_total_items(metrics.ext_pr_comments)))
-    print('\t\tTotal replies for created PRs: {0}'.format(get_support_effort(metrics.ext_prs)))
-    print('\tUnique external contributors: {0}'.format(len(metrics.contributors)))
-
     if verbose:
-        print_users(metrics.contributors)
+        print('\t\tTotal replies for created PRs: {0}'.format(get_support_effort(metrics.ext_prs)))
+    print('\tUnique external contributors: {0}'.format(len(metrics.contributors)))
 
     print('\tStars: {0} ({1} total)'.format(count(metrics.new_stars),
                                             count(metrics.total_stars)))
     if verbose:
         print_users(get_user(s) for s in metrics.new_stars)
-
-    print('\tWatchers: {0}'.format(count(metrics.watchers)))
-    if verbose:
-        print_users(get_user(w) for w in metrics.watchers)
 
     print('\tForks: {0} ({1} total)'.format(count(metrics.new_forks),
                                             count(metrics.total_forks)))
@@ -325,6 +331,8 @@ def output_default(metrics, verbose=0):
         print_users(get_user(f) for f in metrics.new_forks)
 
     print('\tCommits: {0}'.format(count(metrics.commits)))
+
+    print_users(metrics.contributors)
 
     if verbose >= 2:
         print('\tActivity Listing:')
@@ -356,6 +364,7 @@ def nsf_output(metrics, *args):
     print('\tForks: {0} ({1} total)'.format(count(metrics.new_forks),
                                             count(metrics.total_forks)))
     print_users(get_user(f) for f in metrics.new_forks)
+
 
 if __name__ == '__main__':
     import argparse
@@ -406,9 +415,9 @@ if __name__ == '__main__':
     blacklist = {get_user(m) for m in org.get_members()}
 
     # Add other users to blacklist
-    other_users = ['codecov-io', 'landscape-bot', 'rkambic', 'madry',
-                   'BenDomenico', 'JohnLCaron', 'russrew', 'donmurray',
-                   'lago8103']
+    other_users = ['codecov-io', 'landscape-bot', 'rkambic', 'madry', 'BenDomenico',
+                   'JohnLCaron', 'russrew', 'donmurray', 'lago8103', 'mwilson14', 'tjwixtrom',
+                   'CLAassistant', 'codecov[bot]']
     blacklist |= {get_user(g.get_user(u)) for u in other_users}
 
     # Release downloads?
