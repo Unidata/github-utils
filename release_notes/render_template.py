@@ -70,3 +70,4 @@ if __name__ == '__main__':
         rendered_text = render('templates/release_email.html', content)
         with open('formatted_notes/{}.txt'.format(f), 'w') as outfile:
             outfile.write(rendered_text)
+            outfile.write('\n')
