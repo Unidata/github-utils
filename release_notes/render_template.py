@@ -50,19 +50,26 @@ if __name__ == '__main__':
     latest = repo.get_releases()[0]
 
     # Clean up the notes
+    find_api_changes = re.compile(r'.*(?:API Changes)(.*?)[# ]*(?:Highlights|Summary)', re.MULTILINE|re.DOTALL)
+    api_changes = find_api_changes.findall(latest.body)
+    if api_changes:
+        api_changes = api_changes[0].strip().rstrip()
     find_notes = re.compile(r'.*(?:Highlights|Summary)(.*?)[# ]*Issues', re.MULTILINE|re.DOTALL)
     summary_notes = find_notes.findall(latest.body)
     if not summary_notes:
         raise RuntimeError('Unable to find summary in release notes.')
     summary_notes = summary_notes[0].strip().rstrip()
     header_replace = re.compile(r'#+ (.+)')
+    api_changes = header_replace.sub(sub_header, api_changes).replace('\r\n', '\n')
     notes = header_replace.sub(sub_header, summary_notes).replace('\r\n', '\n')
 
     # Make a set of release announcements
     formats = ['pyaos', 'python-users', 'roller']
     for f in formats:
         if f != 'roller':
-            text = strip_markdown_links(notes)
+            text = strip_markdown_links(api_changes + '\n' + notes)
+        else:
+            text = api_changes + '\n' + notes
         content = {'package_name': repo_name,
                    'package_version': latest.title,
                    'release_notes': text,
