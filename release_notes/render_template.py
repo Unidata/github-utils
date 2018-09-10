@@ -40,14 +40,18 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('repository', help='Repository', type=str, nargs=1)
     parser.add_argument('-o', '--org', help='Organization', type=str, default='Unidata')
+    parser.add_argument('-r', '--release', help='Release', type=str, default=None)
     args = parser.parse_args()
 
     repo_name = args.repository[0]
 
-    # Get the repo's latest set of release notes
+    # Get the repo's set of release notes
     git = github.Github()
     repo = git.get_repo('Unidata/{}'.format(repo_name))
-    latest = repo.get_releases()[0]
+    if args.release is None:
+        latest = repo.get_latest_release()
+    else:
+        latest = repo.get_release(args.release)
 
     # Clean up the notes
     find_api_changes = re.compile(r'.*(?:API Changes)(.*?)[# ]*(?:Highlights|Summary)', re.MULTILINE|re.DOTALL)
