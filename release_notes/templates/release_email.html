@@ -6,10 +6,10 @@ Hi,
 
 {{ release_notes }}
 
-For full release notes see the {% if format == 'roller' %}[GitHub Release Page](https://github.com/Unidata/MetPy/releases/tag/v{{ package_version }}).{% else %}GitHub release page.{% endif %}
+For full release notes see the {% if format == 'roller' %}[GitHub Release Page](https://github.com/Unidata/{{ package_name }}/releases/tag/v{{ package_version }}).{% else %}GitHub release page.{% endif %}
 
 {%- if format != 'roller' %}
-https://github.com/Unidata/MetPy/releases/tag/v{{ package_version }}
+https://github.com/Unidata/{{ package_name }}/releases/tag/v{{ package_version }}
 {%- endif %}
 
 {{ package_name }} packages are available for Conda on the {% if format == 'roller' %}[conda-forge channel](https://anaconda.org/conda-forge/{{ package_name }}){% else %}conda-forge channel {% endif %}
@@ -20,7 +20,8 @@ https://anaconda.org/conda-forge/{{ package_name }}
 https://pypi.python.org/pypi/{{ package_name }}
 {%- endif %}
 
-Let us know if you run into any problems, either at {% if format == 'roller' %}[{{ package_name }} issue tracker](https://github.com/Unidata/{{ package_name }}/issues){% else %}{{ package_name }} issue tracker{% endif %}, or on
+Let us know if you run into any problems, either at {% if format == 'roller' %}[{{ package_name }} issue tracker](https://github.com/Unidata/{{ package_name }}/issues){% else %}{{ package_name }} issue tracker{% endif %},
+using support-python@unidata.ucar.edu, or on
 {% if format == 'python-users' %}this list.
 {% elif format =='roller' %}the [python-users list](https://www.unidata.ucar.edu/support/#mailinglists).
 {%- else -%}
