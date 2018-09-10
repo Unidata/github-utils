@@ -27,6 +27,8 @@ Let us know if you run into any problems, either at {% if format == 'roller' %}[
 the python-users list:
 https://www.unidata.ucar.edu/support/#mailinglists
 {% endif %}
+You can also ask questions using the "{{ package_tag }}" tag on {% if format == 'roller' %}[Stack Overflow](https://stackoverflow.com/questions/tagged/{{ package_tag }}).{% else %}Stack Overflow.{% endif %}
 {% if format != 'roller' -%}
 https://github.com/Unidata/{{ package_name }}/issues
+https://stackoverflow.com/questions/tagged/{{ package_tag }}
 {%- endif -%}

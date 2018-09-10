@@ -76,7 +76,8 @@ if __name__ == '__main__':
         content = {'package_name': repo_name,
                    'package_version': latest.title,
                    'release_notes': text,
-                   'format': f}
+                   'format': f,
+                   'package_tag': 'python-siphon' if repo_name == 'siphon' else repo_name}
         rendered_text = render('templates/release_email.html', content)
         with open('formatted_notes/{}.txt'.format(f), 'w') as outfile:
             outfile.write(rendered_text)
