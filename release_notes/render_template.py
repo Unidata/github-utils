@@ -60,7 +60,10 @@ if __name__ == '__main__':
         raise RuntimeError('Unable to find summary in release notes.')
     summary_notes = summary_notes[0].strip().rstrip()
     header_replace = re.compile(r'#+ (.+)')
-    api_changes = header_replace.sub(sub_header, api_changes).replace('\r\n', '\n')
+    if api_changes:
+        api_changes = header_replace.sub(sub_header, api_changes).replace('\r\n', '\n')
+    else:
+        api_changes = ''
     notes = header_replace.sub(sub_header, summary_notes).replace('\r\n', '\n')
 
     # Make a set of release announcements
