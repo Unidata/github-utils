@@ -417,8 +417,8 @@ if __name__ == '__main__':
     # Add other users to blacklist
     other_users = ['codecov-io', 'landscape-bot', 'rkambic', 'madry', 'BenDomenico',
                    'JohnLCaron', 'russrew', 'donmurray', 'lago8103', 'mwilson14', 'tjwixtrom',
-                   'CLAassistant', 'codecov[bot]', 'jthielen', 'haileyajohnson',
-                   'stickler-ci']
+                   'CLAassistant', 'codecov[bot]', 'haileyajohnson', 'mgrover1',
+                   'stickler-ci', 'jrleeman']
     blacklist |= {get_user(g.get_user(u)) for u in other_users}
 
     # Release downloads?
