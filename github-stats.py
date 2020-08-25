@@ -405,7 +405,7 @@ if __name__ == '__main__':
     g = github.Github(get_token())
 
     if args.debug:
-        rate = g.get_rate_limit().rate
+        rate = g.get_rate_limit().core
         print('API calls remaining: {0} (Resets at {1})'.format(rate.remaining, rate.reset))
 
     # Get the organization
