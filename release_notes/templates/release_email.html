@@ -3,7 +3,6 @@ Hi,
 
 {% endif -%}
 {{ package_name }} {{ package_version }} has been released:
-
 {{ release_notes }}
 
 For full release notes see the {% if format == 'roller' %}[GitHub Release Page](https://github.com/Unidata/{{ package_name }}/releases/tag/v{{ package_version }}).{% else %}GitHub release page.{% endif %}
@@ -14,6 +13,13 @@ https://github.com/Unidata/{{ package_name }}/releases/tag/v{{ package_version }
 
 {{ package_name }} packages are available for Conda on the {% if format == 'roller' %}[conda-forge channel](https://anaconda.org/conda-forge/{{ package_name }}){% else %}conda-forge channel {% endif %}
 and for pip from the {% if format == 'roller' %}[Python Package Index](https://pypi.python.org/pypi/{{ package_name }}){% else %}Python Package Index{% endif %}.
+{% if format == 'roller' %}They can be installed with:
+<p></p>
+<pre>pip install metpy=={{ package_version }}</pre>
+or
+<pre>conda install -c conda-forge metpy={{ package_version }}</pre>
+</p>
+{%- endif %}
 
 {%- if format != 'roller' %}
 https://anaconda.org/conda-forge/{{ package_name }}
