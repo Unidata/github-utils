@@ -92,8 +92,12 @@ def get_user(item):
         user = item
 
     if user.login not in get_user.cache:
-        get_user.cache[user.login] = Contributor(user.login, user.name, user.email,
-                                                 user.company)
+        try:
+            get_user.cache[user.login] = Contributor(user.login, user.name, user.email,
+                                                     user.company)
+        # Apparently the API will give us forks for deleted accounts?
+        except github.UnknownObjectException:
+            get_user.cache[user.login] = Contributor(user.login, '', '', '')
 
     return get_user.cache[user.login]
 
@@ -235,7 +239,12 @@ class RepoMetrics(object):
 
     @property
     def new_forks(self):
-        return (f for f in self.total_forks if self.date_in_range(f.created_at))
+        def count_fork(f):
+            try:
+                return self.date_in_range(f.created_at)
+            except Exception:
+                return False
+        return (f for f in self.total_forks if count_fork(f))
 
     @property
     @lru_cache()
