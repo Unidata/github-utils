@@ -21,15 +21,9 @@ https://pypi.python.org/pypi/{{ package_name }}
 {%- endif %}
 
 Let us know if you run into any problems, either at {% if format == 'roller' %}[{{ package_name }} issue tracker](https://github.com/Unidata/{{ package_name }}/issues){% else %}{{ package_name }} issue tracker{% endif %},
-using support-python@unidata.ucar.edu, or on
-{% if format == 'python-users' %}this list.
-{% elif format =='roller' %}the [python-users list](https://www.unidata.ucar.edu/support/#mailinglists).
-{%- else -%}
-the python-users list:
-https://www.unidata.ucar.edu/support/#mailinglists
-{% endif %}
-You can also ask questions using the "{{ package_tag }}" tag on {% if format == 'roller' %}[Stack Overflow](https://stackoverflow.com/questions/tagged/{{ package_tag }}).{% else %}Stack Overflow.{% endif %}
+or using support-python@unidata.ucar.edu. You can also ask questions using the "{{ package_tag }}" tag on {% if format == 'roller' %}[Stack Overflow](https://stackoverflow.com/questions/tagged/{{ package_tag }}){% else %}Stack Overflow{% endif %}, or on {% if format == 'roller' %}[GitHub Discussions](https://github.com/Unidata/{{ package_name }}/discussions){% else %}GitHub Discussions{% endif %}.
 {% if format != 'roller' -%}
 https://github.com/Unidata/{{ package_name }}/issues
 https://stackoverflow.com/questions/tagged/{{ package_tag }}
+https://github.com/Unidata/{{ package_name }}/discussions
 {%- endif -%}
