@@ -58,7 +58,8 @@ if __name__ == '__main__':
     api_changes = find_api_changes.findall(latest.body)
     if api_changes:
         api_changes = api_changes[0].strip().rstrip()
-    find_notes = re.compile(r'.*(?:Highlights|Summary)(.*?)[# ]*Issues', re.MULTILINE|re.DOTALL)
+    find_notes = re.compile(r'.*(?:Highlights|Summary)(.*?)[# ]*(?:Issues|New Features|Enhancements|Bugs Fixed)',
+                            re.MULTILINE|re.DOTALL)
     summary_notes = find_notes.findall(latest.body)
     if not summary_notes:
         raise RuntimeError('Unable to find summary in release notes.')
