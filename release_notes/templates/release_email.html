@@ -5,10 +5,10 @@ Hi,
 {{ package_name }} {{ package_version }} has been released:
 {{ release_notes }}
 
-For full release notes see the {% if format == 'roller' %}[GitHub Release Page](https://github.com/Unidata/{{ package_name }}/releases/tag/v{{ package_version }}).{% else %}GitHub release page.{% endif %}
+For full release notes see the {% if format == 'roller' %}[GitHub Release Page](https://github.com/Unidata/{{ package_name }}/releases/tag/{{ package_version }}).{% else %}GitHub release page.{% endif %}
 
 {%- if format != 'roller' %}
-https://github.com/Unidata/{{ package_name }}/releases/tag/v{{ package_version }}
+https://github.com/Unidata/{{ package_name }}/releases/tag/{{ package_version }}
 {%- endif %}
 
 {{ package_name }} packages are available for Conda on the {% if format == 'roller' %}[conda-forge channel](https://anaconda.org/conda-forge/{{ package_name }}){% else %}conda-forge channel {% endif %}
