@@ -27,7 +27,7 @@ def strip_markdown_links(text):
     """
     Turn any markdown links to plain text.
     """
-    links = re.findall('\[.*\]\(.*\)', text)
+    links = re.findall(r'\[.*\]\(.*\)', text)
     links_cleaned = [l.replace('[','').replace(']', ' ') for l in links]
     for link, clean in zip(links, links_cleaned):
         text = text.replace(link, clean)
